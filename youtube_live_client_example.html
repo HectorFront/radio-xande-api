@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>YouTube Live Chat Client</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+    <h1>YouTube Live Integration</h1>
+    
+    <div>
+        <input type="text" id="channelId" placeholder="Channel ID" value="UCXuqSBlHAE6Xw-yeJA0Tunw">
+        <button onclick="checkLiveStatus()">Check Live Status</button>
+        <button onclick="startMonitoring()">Start WebSocket Monitoring</button>
+        <button onclick="stopMonitoring()">Stop Monitoring</button>
+    </div>
+    
+    <div id="status"></div>
+    <div id="messages"></div>
+
+    <script>
+        const socket = io('http://localhost:8080');
+        
+        socket.on('connect', function() {
+            console.log('Connected to server');
+            document.getElementById('status').innerHTML = '<p>Connected to WebSocket</p>';
+        });
+        
+        socket.on('live_status', function(data) {
+            console.log('Live Status:', data);
+            const statusDiv = document.getElementById('status');
+            if (data.is_live) {
+                statusDiv.innerHTML = `
+                    <h3>🔴 LIVE: ${data.title}</h3>
+                    <p>Video ID: ${data.video_id}</p>
+                    <p>Started: ${data.started_at}</p>
+                    ${data.stream_url ? `<p>Stream: <a href="${data.stream_url}" target="_blank">M3U8</a></p>` : ''}
+                `;
+            } else {
+                statusDiv.innerHTML = '<h3>⚫ Offline</h3>';
+            }
+        });
+        
+        socket.on('live_chat', function(messages) {
+            console.log('Chat Messages:', messages);
+            const messagesDiv = document.getElementById('messages');
+            
+            messages.forEach(msg => {
+                const messageEl = document.createElement('div');
+                messageEl.innerHTML = `
+                    <strong>${msg.author.name}:</strong> ${msg.message}
+                    <small>(${new Date(msg.timestamp).toLocaleTimeString()})</small>
+                `;
+                messagesDiv.appendChild(messageEl);
+            });
+            
+            // Scroll to bottom
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        });
+        
+        socket.on('error', function(data) {
+            console.error('Error:', data);
+            document.getElementById('status').innerHTML = `<p style="color: red;">Error: ${data.message}</p>`;
+        });
+        
+        function checkLiveStatus() {
+            const channelId = document.getElementById('channelId').value;
+            
+            fetch(`http://localhost:8080/api/v1/youtube/live/${channelId}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('HTTP Live Status:', data);
+                    const statusDiv = document.getElementById('status');
+                    
+                    if (data.is_live) {
+                        statusDiv.innerHTML = `
+                            <h3>🔴 LIVE: ${data.title}</h3>
+                            <p>Video ID: ${data.video_id}</p>
+                            ${data.stream_url ? `<p>Stream: <a href="${data.stream_url}" target="_blank">M3U8</a></p>` : ''}
+                        `;
+                    } else {
+                        statusDiv.innerHTML = '<h3>⚫ Offline</h3>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('status').innerHTML = `<p style="color: red;">Error: ${error}</p>`;
+                });
+        }
+        
+        function startMonitoring() {
+            const channelId = document.getElementById('channelId').value;
+            socket.emit('start_monitoring', { channel_id: channelId });
+        }
+        
+        function stopMonitoring() {
+            socket.emit('stop_monitoring');
+        }
+    </script>
+</body>
+</html>
