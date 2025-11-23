@@ -1,12 +1,21 @@
+    
+import re
+import json
 import time
+import yt_dlp
+import requests
 import threading
+from datetime import datetime
 from typing import Dict, Optional
+from infra.environments import env
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-import yt_dlp
-from infra.environments import env
+from domain.youtube import YT_CHANNEL_ID_SUPERXANDAO
+from schema.youtube_live_cache import YouTubeLiveCache
+from model.youtube_live_cache import YouTubeLiveCacheModel
 
 class YouTubeLiveService:
+    
     def __init__(self):
         self.api_key = env.get('YOUTUBE_API_KEY')
         self.youtube = build('youtube', 'v3', developerKey=self.api_key)
@@ -14,11 +23,46 @@ class YouTubeLiveService:
         self.next_page_token = None
         self.is_monitoring = False
         
-    def get_channel_live_status(self, channel_id: str) -> Dict:
+    def reset_youtube_live_cache(self):
+        YouTubeLiveCacheModel.upsert_cache(
+            channel_id=YT_CHANNEL_ID_SUPERXANDAO,
+            is_live=False,
+            video_id=None,
+            title=None,
+            thumbnail=None,
+            live_chat_id=None,
+            started_at=None
+        )
+        
+    def get_channel_live_status(self) -> Dict:
+        cached_data = YouTubeLiveCacheModel.get_cache(YT_CHANNEL_ID_SUPERXANDAO)
+        if cached_data:
+            self.live_chat_id = cached_data.live_chat_id
+            if not cached_data.is_live and not self._should_check_live(cached_data.last_live_check):
+                self.reset_youtube_live_cache()
+                return {'is_live': False}
+            # Update live check
+            if self._should_check_live(cached_data.last_live_check):
+                is_live_check = self._check_live_by_crawler()
+                if not is_live_check:
+                    self.reset_youtube_live_cache()
+                    YouTubeLiveCacheModel.update_live_check(YT_CHANNEL_ID_SUPERXANDAO)
+                    return {'is_live': False}
+            # Return data from cache
+            if cached_data.is_live:
+                return {
+                    'is_live': cached_data.is_live,
+                    'video_id': cached_data.video_id,
+                    'title': cached_data.title,
+                    'thumbnail': cached_data.thumbnail,
+                    'live_chat_id': cached_data.live_chat_id,
+                    'started_at': cached_data.started_at.strftime('%Y-%m-%dT%H:%M:%S') if cached_data.started_at else None
+                }
+        # Not cache or need to check live status
         try:
             request = self.youtube.search().list(
                 part='snippet',
-                channelId=channel_id,
+                channelId=YT_CHANNEL_ID_SUPERXANDAO,
                 eventType='live',
                 type='video',
                 maxResults=1
@@ -35,17 +79,51 @@ class YouTubeLiveService:
                 if video_response['items']:
                     live_details = video_response['items'][0].get('liveStreamingDetails', {})
                     self.live_chat_id = live_details.get('activeLiveChatId')
+                    started_at = live_details.get('actualStartTime')
+                    started_at_dt = None
+                    if started_at:
+                        try:
+                            started_at_dt = datetime.fromisoformat(started_at.replace('Z', '+00:00'))
+                        except:
+                            started_at_dt = None
+                    YouTubeLiveCacheModel.upsert_cache(
+                        channel_id=YT_CHANNEL_ID_SUPERXANDAO,
+                        is_live=True,
+                        video_id=video_id,
+                        title=video['snippet']['title'],
+                        thumbnail=video['snippet']['thumbnails']['high']['url'],
+                        live_chat_id=self.live_chat_id,
+                        started_at=started_at_dt
+                    )
                     return {
                         'is_live': True,
                         'video_id': video_id,
                         'title': video['snippet']['title'],
                         'thumbnail': video['snippet']['thumbnails']['high']['url'],
                         'live_chat_id': self.live_chat_id,
-                        'started_at': live_details.get('actualStartTime')
+                        'started_at': started_at_dt.strftime('%Y-%m-%dT%H:%M:%S') if started_at_dt else None
                     }
-            
+            YouTubeLiveCacheModel.upsert_cache(
+                channel_id=YT_CHANNEL_ID_SUPERXANDAO,
+                is_live=False
+            )
             return {'is_live': False}
         except HttpError as e:
+            fallback_cache = YouTubeLiveCache.query.filter(
+                YouTubeLiveCache.channel_id == YT_CHANNEL_ID_SUPERXANDAO
+            ).order_by(YouTubeLiveCache.cached_at.desc()).first()
+            
+            if fallback_cache:
+                self.live_chat_id = fallback_cache.live_chat_id
+                return {
+                    'is_live': fallback_cache.is_live,
+                    'video_id': fallback_cache.video_id,
+                    'title': fallback_cache.title,
+                    'thumbnail': fallback_cache.thumbnail,
+                    'live_chat_id': fallback_cache.live_chat_id,
+                    'started_at': fallback_cache.started_at.strftime('%Y-%m-%dT%H:%M:%S') if fallback_cache.started_at else None,
+                    'cached': True
+                }
             return {'error': f'YouTube API error: {e}', 'is_live': False}
     
     def get_stream_url(self, video_id: str) -> Optional[str]:
@@ -101,12 +179,12 @@ class YouTubeLiveService:
         except HttpError as e:
             return {'error': f'Chat API error: {e}', 'messages': []}
     
-    def start_chat_monitoring(self, socketio, channel_id: str):
+    def start_chat_monitoring(self, socketio):
         def monitor():
             self.is_monitoring = True
             while self.is_monitoring:
                 try:
-                    status = self.get_channel_live_status(channel_id)
+                    status = self.get_channel_live_status(YT_CHANNEL_ID_SUPERXANDAO)
                     socketio.emit('live_status', status)
                     if status.get('is_live') and self.live_chat_id:
                         chat_data = self.get_live_chat_messages(self.next_page_token)
@@ -125,6 +203,18 @@ class YouTubeLiveService:
         thread = threading.Thread(target=monitor)
         thread.daemon = True
         thread.start()
+    
+    def _should_check_live(self, last_check: datetime) -> bool:
+        if not last_check:
+            return True
+        return (datetime.now() - last_check).total_seconds() > 15
+
+    def _check_live_by_crawler(self):
+        url = f"https://www.youtube.com/channel/{YT_CHANNEL_ID_SUPERXANDAO}/live"
+        html = requests.get(url, headers={
+            "User-Agent": "Mozilla/5.0"
+        }).text
+        return '"isLive":true' in html
     
     def stop_chat_monitoring(self):
         self.is_monitoring = False

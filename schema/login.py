@@ -7,7 +7,7 @@ class Login(database.Model):
     id = database.Column(database.String(56), primary_key=True, nullable=False)
     user_id = database.Column(database.String(56), database.ForeignKey('user.id', ondelete="CASCADE"), nullable=False)
     email = database.Column(database.String(128), nullable=False, unique=True)
-    password = database.Column(database.String(256), nullable=False)
+    password = database.Column(database.String(256), nullable=True)
     latest_login = database.Column(database.DateTime, nullable=False)
     logged = database.Column(database.Boolean, nullable=True)
     access_token = database.Column(database.String(256), nullable=True, unique=True)

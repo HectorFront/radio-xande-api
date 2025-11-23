@@ -1,3 +1,4 @@
+from schema.ad import AdSchema
 from schema.login import LoginSchema
 from schema.user import DataUserSchema
 from schema.comment_chat import CommentChatSchema
@@ -16,3 +17,4 @@ from schema.vote_bad_community import VoteBadCommunitySchema
 from schema.vote_up_post import VoteUpPostSchema
 from schema.vote_bad_post import VoteBadPostSchema
 from schema.log_errors import LogErrorsSchema
+from schema.youtube_live_cache import YouTubeLiveCacheSchema

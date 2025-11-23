@@ -4,8 +4,13 @@ from controller import *
 
 @app.route("/api/v1/user/register", methods=["POST"])
 @client_required
-def register():
+def user_register():
     return UserControl.user_register(request)
+
+@app.route("/api/v1/user/oauth/register/<provider>", methods=["POST"])
+@client_required
+def user_oauth_register(provider):
+    return UserControl.oauth_register(request, provider)
 
 @app.route("/api/v1/user/<id>", methods=["GET", "PUT", "PATCH", "DELETE"])
 @jwt_required

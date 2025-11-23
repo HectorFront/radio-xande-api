@@ -29,7 +29,7 @@ class UserSchema(serializer.SQLAlchemyAutoSchema):
     date_subscription = fields.DateTime(format='%Y-%m-%dT%H:%M:%SZ')
     date_period_end_subscription = fields.DateTime(format='%Y-%m-%dT%H:%M:%SZ')
     date_created = fields.DateTime(format='%Y-%m-%dT%H:%M:%SZ')
-    login = serializer.Nested(LoginSchema, many=True, exclude=["password", "code_recovery", "timing_recovery", "id"])
+    login = serializer.Nested(LoginSchema, many=True, exclude=["password", "code_recovery", "timing_recovery", "user_id", "logged",  "email", "id"])
     class Meta:
         model = User
 

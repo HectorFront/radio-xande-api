@@ -33,11 +33,11 @@ class CrudHelper:
         if hasattr(schema, key):
             _key = getattr(schema, key).name
             _table = getattr(schema, "__table__")
-            return schema.query.filter(_table.c[key] == value).first_or_404()
+            return schema.query.filter(_table.c[key] == value).first()
 
     @staticmethod
     def get_one_by_id(id: int, schema: object) -> object:
-        return schema.query.filter(schema.id == id).first_or_404()
+        return schema.query.filter(schema.id == id).first()
 
     @staticmethod
     def get_all_by_object_key(key: str, value: Any, schema: object) -> object:

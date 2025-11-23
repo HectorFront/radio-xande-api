@@ -8,3 +8,4 @@ from routes.webhook import *
 from routes.music import *
 from routes.media_stream import *
 from routes.youtube_live import *
+from routes.ad import *
