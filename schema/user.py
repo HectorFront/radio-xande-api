@@ -7,10 +7,13 @@ class User(database.Model):
 
     id = database.Column(database.String(56), primary_key=True, nullable=False)
     name = database.Column(database.String(256), nullable=False)
+    username = database.Column(database.String(256), nullable=False)
     email = database.Column(database.String(128), nullable=False, unique=True)
-    admin = database.Column(database.Boolean, nullable=True)
-    moderator = database.Column(database.Boolean, nullable=True)
-    banned = database.Column(database.Boolean, nullable=True)
+    is_dev = database.Column(database.Boolean, nullable=True)
+    is_superxandao = database.Column(database.Boolean, nullable=True)
+    is_admin = database.Column(database.Boolean, nullable=True)
+    is_moderator = database.Column(database.Boolean, nullable=True)
+    is_banned = database.Column(database.Boolean, nullable=True)
     banned_until_date = database.Column(database.DateTime, nullable=True)
     plan = database.Column(database.Text, nullable=True)
     customer = database.Column(database.Text, nullable=True)
@@ -29,7 +32,7 @@ class UserSchema(serializer.SQLAlchemyAutoSchema):
     date_subscription = fields.DateTime(format='%Y-%m-%dT%H:%M:%SZ')
     date_period_end_subscription = fields.DateTime(format='%Y-%m-%dT%H:%M:%SZ')
     date_created = fields.DateTime(format='%Y-%m-%dT%H:%M:%SZ')
-    login = serializer.Nested(LoginSchema, many=True, exclude=["password", "code_recovery", "timing_recovery", "user_id", "logged",  "email", "id"])
+    login = serializer.Nested(LoginSchema, many=True, exclude=["password", "code_recovery", "timing_recovery", "id"])
     class Meta:
         model = User
 

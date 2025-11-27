@@ -6,7 +6,7 @@ class VoteUpComment(database.Model):
 
     id = database.Column(database.String(56), primary_key=True, nullable=False)
     user_id = database.Column(database.String(56), database.ForeignKey('user.id', ondelete="CASCADE"), nullable=True)
-    comment_chat_id = database.Column(database.String(56), database.ForeignKey('comment_chat.id', ondelete="CASCADE"), nullable=True)
+    comment_post_id = database.Column(database.String(56), database.ForeignKey('comment_post.id', ondelete="CASCADE"), nullable=True)
     date_created = database.Column(database.DateTime, nullable=False)
 
 class VoteUpCommentSchema(serializer.SQLAlchemyAutoSchema):

@@ -9,35 +9,43 @@ class UserModel:
     def insert(
         name: str,
         email: str,
-        date_create_account: object,
-        cellphone: str = None,
-        income: float = 0,
-        picture: str = None,
+        username: str,
+        date_created: object,
+        picture: str = None
     ) -> User:
         user = User(
             id=str(uuid.uuid4()),
             name=name,
-            balance=0,
             email=email,
+            username=username,
             customer=None,
-            income=income,
             picture=picture,
             plan='free',
-            dark_mode=False,
             subscription=None,
-            cellphone=cellphone,
             payment_method=None,
             date_subscription=None,
-            date_create_account=date_create_account,
-            promotion_expiration=None
+            date_created=date_created
         )
         if CrudHelper.insert(user):
             CrudHelper.flush_to_database()
         return user
 
     @staticmethod
-    def get_user(id) -> object:
+    def get_by_id(id) -> object:
         return CrudHelper.get_one_by_id(id, User)
+    
+    @staticmethod
+    def get_by_username(username: str) -> object:
+        return User.query.filter(User.username == username).first()
+    
+    @staticmethod
+    def get_count_users() -> int:
+        return User.query.count()
+    
+    @staticmethod
+    def get_count_users_by_username_pattern(base_username: str):
+        pattern = f"^{base_username}(\\d+)?$"
+        return User.query.filter(User.username.regexp_match(pattern)).count()
 
     @staticmethod
     def get_by_email(email: str) -> object:

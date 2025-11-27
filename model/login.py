@@ -27,7 +27,7 @@ class LoginModel:
     ) -> None:
         if LoginModel.validate_password_register(password):
             login = Login(
-                iid=str(uuid.uuid4()),
+                id=str(uuid.uuid4()),
                 user=user,
                 email=email,
                 password=generate_password_hash(password),

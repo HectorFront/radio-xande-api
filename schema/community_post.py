@@ -12,6 +12,7 @@ class CommunityPost(database.Model):
     description = database.Column(database.String(1000), nullable=False)
     video_attached = database.Column(database.Text, nullable=True)
     image_attached = database.Column(database.Text, nullable=True)
+    gif_attached = database.Column(database.String(56), database.ForeignKey('gif.id'), nullable=True)
     date_created = database.Column(database.DateTime, nullable=False)
 
 class CommunityPostSchema(serializer.SQLAlchemyAutoSchema):

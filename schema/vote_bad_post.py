@@ -6,7 +6,7 @@ class VoteBadPost(database.Model):
 
     id = database.Column(database.String(56), primary_key=True, nullable=False)
     user_id = database.Column(database.String(56), database.ForeignKey('user.id', ondelete="CASCADE"), nullable=True)
-    post_id = database.Column(database.String(56), database.ForeignKey('community_post.id', ondelete="CASCADE"), nullable=True)
+    community_post_id = database.Column(database.String(56), database.ForeignKey('community_post.id', ondelete="CASCADE"), nullable=True)
     date_created = database.Column(database.DateTime, nullable=False)
 
 class VoteBadPostSchema(serializer.SQLAlchemyAutoSchema):

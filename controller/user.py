@@ -5,14 +5,14 @@ from model.user import UserModel
 from model.login import LoginModel
 from domain.http_response import HttpResponse
 from schema.user import DataUserSchema, UserSchema
-from services import ServiceLogin, ServiceGatewayPayment
+from services import ServiceLogin, ServiceGatewayPayment, ServiceUsername
 
 class UserControl:
 
     @staticmethod
     def user_data(_request, current_user):
         ServiceGatewayPayment.handle_user_subscription(current_user)
-        return HttpResponse.ok(DataUserSchema(many=True).dump(current_user))
+        return HttpResponse.ok(DataUserSchema(many=False).dump(current_user))
     
     @staticmethod
     def user_delete(_request, current_user, id):
@@ -27,7 +27,7 @@ class UserControl:
     def user_update(request, current_user, id):
         if current_user.id == id:
             data = request.json
-            user = UserModel.get_user(current_user.id)
+            user = UserModel.get_by_id(current_user.id)
             update = {
                 "name": data.get('name', user.name),
                 "email": data.get('email', user.email)
@@ -70,33 +70,45 @@ class UserControl:
         db_user = UserModel.get_by_email(email)
         if db_user:
             return HttpResponse.conflict()
+        picture_url = None
+        if provider == 'facebook':
+            picture_data = user_info.get('picture')
+            if picture_data and isinstance(picture_data, dict):
+                picture_url = picture_data.get('data', {}).get('url')
+        elif provider == 'google':
+            picture_url = user_info.get('picture')
         try:
+            username = ServiceUsername.create_username(user_info.get("name"))
             user = UserModel.insert(
                 user_info.get("name"), 
-                user_info.get("email"), 
+                user_info.get("email"),
+                username,
                 datetime.now(),
-                user_info.get("picture", None)
+                picture_url
             )
             LoginModel.insert(
                 user,
-                None,
+                user.email,
+                access_token,
                 datetime.now(),
                 ServiceLogin.create_token(user),
                 ServiceLogin.create_refresh_token(user)
             )
             UserModel.commit()
             LoginModel.commit()
-            return HttpResponse.ok(UserSchema(many=True).dump(user))
-        except AttributeError as err:
+            return HttpResponse.ok(UserSchema(many=False).dump(user))
+        except Exception as err:
             return HttpResponse.bad_request(err)
 
     @staticmethod
     def user_register(request):
         data = request.json
         try:
+            username = ServiceUsername.create_username(data.get("name"))
             user = UserModel.insert(
                 data.get("name"), 
-                data.get("email"), 
+                data.get("email"),
+                username,
                 datetime.now(),
                 data.get("picture", None)
             )
@@ -109,6 +121,6 @@ class UserControl:
             )
             UserModel.commit()
             LoginModel.commit()
-            return HttpResponse.ok(UserSchema(many=True).dump(user))
+            return HttpResponse.ok(UserSchema(many=False).dump(user))
         except AttributeError as err:
             return HttpResponse.bad_request(err)
