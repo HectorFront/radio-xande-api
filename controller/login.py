@@ -71,24 +71,14 @@ class LoginControl:
             decoded = jwt.decode(refresh_token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
             current_user = LoginModel.get_by_email_and_refresh_token(decoded.get("email"), refresh_token)
             if current_user:
-                if ServiceLogin.platform_is_mobile(request):
-                    new_token_app = ServiceLogin.create_token_app(current_user)
-                    new_refresh_token_app = ServiceLogin.create_refresh_token(current_user)
-                    LoginModel.update_token_login_app(current_user, new_token_app, new_refresh_token_app)
-                    LoginModel.commit()
-                    return HttpResponse.ok({
-                        "access_token_app": new_token_app,
-                        "refresh_token_app": new_refresh_token_app
-                    })
-                else:
-                    new_token = ServiceLogin.create_token(current_user)
-                    new_refresh_token = ServiceLogin.create_refresh_token(current_user)
-                    LoginModel.update_token_login(current_user, new_token, new_refresh_token)
-                    LoginModel.commit()
-                    return HttpResponse.ok({
-                        "access_token": new_token,
-                        "refresh_token": new_refresh_token
-                    })
+                new_token = ServiceLogin.create_token(current_user)
+                new_refresh_token = ServiceLogin.create_refresh_token(current_user)
+                LoginModel.update_token_login(current_user, new_token, new_refresh_token)
+                LoginModel.commit()
+                return HttpResponse.ok({
+                    "access_token": new_token,
+                    "refresh_token": new_refresh_token
+                })
         except (DecodeError, ExpiredSignatureError, HTTPException):
             return HttpResponse.unauthorized()
 
@@ -99,14 +89,12 @@ class LoginControl:
             ServiceLogin.set_code_null(login)
             Login.query.filter_by(email=login.email).update(
                 dict(
-                    access_token=ServiceLogin.create_token(login),
-                    access_token_app=ServiceLogin.create_token_app(login)
+                    access_token=ServiceLogin.create_token(login)
                 )
             )
             LoginModel.commit()
             return HttpResponse.ok({
-                "access_token": login.access_token,
-                "access_token_app": login.access_token_app
+                "access_token": login.access_token
             })
         else:
             return HttpResponse.unauthorized()
@@ -125,9 +113,6 @@ class LoginControl:
     def logout(request, current_user):
         if current_user.login[0].logged:
             login = Login.query.filter(Login.user_id == current_user.id)
-            if ServiceLogin.platform_is_mobile(request):
-                login.update(dict(access_token_app=None, logged_app=False))
-            else:
-                login.update(dict(access_token=None, logged=False))
+            login.update(dict(access_token=None, logged=False))
             LoginModel.commit()
             return HttpResponse.ok()

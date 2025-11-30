@@ -9,6 +9,7 @@ class CommunityPost(database.Model):
     is_meme = database.Column(database.Boolean, nullable=True)
     is_notice = database.Column(database.Boolean, nullable=True)
     is_generic = database.Column(database.Boolean, nullable=True)
+    is_blocked_comments = database.Column(database.Boolean, nullable=True)
     description = database.Column(database.String(1000), nullable=False)
     video_attached = database.Column(database.Text, nullable=True)
     image_attached = database.Column(database.Text, nullable=True)

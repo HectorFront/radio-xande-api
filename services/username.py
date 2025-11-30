@@ -8,7 +8,7 @@ class ServiceUsername:
     
     @staticmethod
     def create_username(name: str):
-        format_username = "".join(str(name).split(" ")).lower()
+        format_username = "".join(str(name).split(" ")[:2]).lower()
         if not ServiceUsername.username_existing(format_username):
             return format_username
         count = UserModel.get_count_users_by_username_pattern(format_username)

@@ -52,22 +52,7 @@ class LoginModel:
         return User.query \
             .filter(User.id == current_user.user_id) \
             .first_or_404()
-
-    @staticmethod
-    def update_token_login_app(
-        current_user: object,
-        token_app: str,
-        refresh_token_app: str
-    ):
-        setattr(current_user, 'access_token_app', token_app)
-        setattr(current_user, 'refresh_token_app', refresh_token_app)
-        setattr(current_user, 'logged_app', True)
-        setattr(current_user, 'latest_login', datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-        LoginModel.commit()
-        return User.query \
-            .filter(User.id == current_user.user_id) \
-            .first_or_404()
-            
+        
     @staticmethod
     def get_by_email(
         email: str
@@ -97,8 +82,7 @@ class LoginModel:
         return Login.query \
             .filter(
                 Login.email == email,
-                (Login.refresh_token == refresh_token) |
-                (Login.refresh_token_app == refresh_token)
+                Login.refresh_token == refresh_token
             ) \
             .first_or_404()
 

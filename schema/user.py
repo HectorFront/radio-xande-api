@@ -12,6 +12,7 @@ class User(database.Model):
     is_dev = database.Column(database.Boolean, nullable=True)
     is_superxandao = database.Column(database.Boolean, nullable=True)
     is_admin = database.Column(database.Boolean, nullable=True)
+    is_artist = database.Column(database.Boolean, nullable=True)
     is_moderator = database.Column(database.Boolean, nullable=True)
     is_banned = database.Column(database.Boolean, nullable=True)
     banned_until_date = database.Column(database.DateTime, nullable=True)

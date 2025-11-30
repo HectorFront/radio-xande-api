@@ -18,8 +18,7 @@ def jwt_required(function):
             decoded = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
             current_user = User.query.filter(User.email == decoded.get("email")).join(Login, Login.email == User.email) \
                 .filter(
-                    (Login.access_token == token) | (Login.refresh_token == token) |
-                    (Login.access_token_app == token) | (Login.refresh_token_app == token)
+                    (Login.access_token == token) | (Login.refresh_token == token)
                 ).first_or_404()
 
         except (DecodeError, ExpiredSignatureError, HTTPException):
